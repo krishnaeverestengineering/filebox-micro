@@ -1,0 +1,5 @@
+  db:
+      databaseUri: host=localhost user=postgres password=krishna009 sslmode=disable dbname=filebox port=5432
+      databaseUser: postgres
+  server:
+    port: 5432
