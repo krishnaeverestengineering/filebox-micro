@@ -1,7 +1,6 @@
 package server
 
 import (
-	"Filebox-Micro/authentication/endpoint"
 	"Filebox-Micro/authentication/transport"
 	"context"
 	"net/http"
@@ -11,7 +10,7 @@ import (
 )
 
 //NewHTTPServer returns router configuration
-func NewHTTPServer(ctx context.Context, endpoints endpoint.Endpoints) http.Handler {
+func NewHTTPServer(ctx context.Context, endpoints transport.Endpoints) http.Handler {
 	r := mux.NewRouter()
 	r.Use(commonMiddleware)
 	r.Methods("GET").Path("/ServiceLogin").Handler(kithttp.NewServer(

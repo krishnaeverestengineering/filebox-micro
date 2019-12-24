@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type (
 	CreateUserRequest struct {
 		UserID   string `json:"uid"`
@@ -8,13 +10,16 @@ type (
 		Root_dir string `json:"root_dir"`
 	}
 	CreateUserResponse struct {
-		Ok bool `json:"ok"`
+		Ok        bool `json:"ok"`
+		Token     string
+		ExprireAt time.Time
 	}
 	GetUserRequest struct {
 		Id string `json:"id"`
 	}
 	GetUserResponse struct {
-		Ok bool `json:"ok"`
+		Ok   bool `json:"ok"`
+		Data User `json:"user"`
 	}
 )
 

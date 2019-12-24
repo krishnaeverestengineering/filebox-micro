@@ -2,12 +2,13 @@ package main
 
 import (
 	"Filebox-Micro/authentication/config"
-	"Filebox-Micro/authentication/endpoint"
 	"Filebox-Micro/authentication/repository"
 	"Filebox-Micro/authentication/server"
 	"Filebox-Micro/authentication/service"
+	"Filebox-Micro/authentication/transport"
 	"context"
 	"filebox/login-service/login"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -36,11 +37,12 @@ func main() {
 		srv = service.NewService(repo, logger)
 	}
 
-	endpoints := endpoint.MakeEndPoints(srv)
+	endpoints := transport.MakeEndPoints(srv)
 
 	errs := make(chan error)
 	go func() {
 		handler := server.NewHTTPServer(ctx, endpoints)
+		fmt.Println("Listening :8080")
 		errs <- http.ListenAndServe("127.0.0.1:8080", handler)
 	}()
 	level.Error(logger).Log("exit", <-errs)
