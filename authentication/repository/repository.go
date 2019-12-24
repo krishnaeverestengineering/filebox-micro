@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type repo struct {
@@ -19,15 +20,15 @@ type Repository interface {
 	GetUser(ctx context.Context, id string) (model.User, error)
 }
 
-func New(config *config.Config, logger log.Logger) Repository {
+func New(config *config.Config, logger log.Logger) (Repository, error) {
 	db, err := gorm.Open(config.Db.DatabaseUser, config.Db.DatabaseUri)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &repo{
 		db:     db,
 		logger: log.With(logger, "repository", "gormDB"),
-	}
+	}, nil
 }
 
 func (r *repo) CreateUser(ctx context.Context, user model.User) error {

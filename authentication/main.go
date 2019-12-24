@@ -7,7 +7,6 @@ import (
 	"Filebox-Micro/authentication/service"
 	"Filebox-Micro/authentication/transport"
 	"context"
-	"filebox/login-service/login"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,9 +14,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 )
-
-var db *login.Database
-var jwtKey = []byte("dumy_key")
 
 func main() {
 	ctx := context.Background()
@@ -33,7 +29,10 @@ func main() {
 	var srv service.Service
 	{
 		config, _ := config.InitConfig()
-		repo := repository.New(config, nil)
+		repo, err := repository.New(config, nil)
+		if err != nil {
+			os.Exit(-1)
+		}
 		srv = service.NewService(repo, logger)
 	}
 
