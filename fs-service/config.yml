@@ -4,4 +4,4 @@ db:
   dbName: "filebox"
 client:
   endpoints:
-    -"http://localhost:8529"
+    "http://localhost:8529"
