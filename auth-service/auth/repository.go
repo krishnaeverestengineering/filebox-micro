@@ -1,8 +1,6 @@
-package repository
+package auth
 
 import (
-	"Filebox-Micro/authentication/config"
-	"Filebox-Micro/authentication/model"
 	"context"
 
 	"github.com/go-kit/kit/log"
@@ -16,11 +14,11 @@ type repo struct {
 }
 
 type Repository interface {
-	CreateUser(ctx context.Context, user model.User) error
-	GetUser(ctx context.Context, id string) (model.User, error)
+	CreateUser(ctx context.Context, user User) error
+	GetUser(ctx context.Context, id string) (User, error)
 }
 
-func New(config *config.Config, logger log.Logger) (Repository, error) {
+func New(config *Config, logger log.Logger) (Repository, error) {
 	db, err := gorm.Open(config.Db.DatabaseUser, config.Db.DatabaseUri)
 	if err != nil {
 		return nil, err
@@ -31,16 +29,16 @@ func New(config *config.Config, logger log.Logger) (Repository, error) {
 	}, nil
 }
 
-func (r *repo) CreateUser(ctx context.Context, user model.User) error {
+func (r *repo) CreateUser(ctx context.Context, user User) error {
 	if err := r.db.Create(user).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *repo) GetUser(ctx context.Context, id string) (model.User, error) {
-	var user model.User
-	if err := r.db.Where(&model.User{UId: id}).First(&user).Error; err != nil {
+func (r *repo) GetUser(ctx context.Context, id string) (User, error) {
+	var user User
+	if err := r.db.Where(&User{UId: id}).First(&user).Error; err != nil {
 		return user, err
 	}
 	return user, nil

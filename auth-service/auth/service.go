@@ -1,8 +1,6 @@
-package service
+package auth
 
 import (
-	"Filebox-Micro/authentication/model"
-	"Filebox-Micro/authentication/repository"
 	"context"
 	"time"
 
@@ -14,12 +12,12 @@ import (
 
 type Service interface {
 	CreateUser(ctx context.Context, userId string, name string, email string) (bool, error)
-	GetUser(ctx context.Context, userId string) (bool, model.User, error)
+	GetUser(ctx context.Context, userId string) (bool, User, error)
 	GetSessionToken(userID string, secret []byte) (string, time.Time, error)
 }
 
 type LoginService struct {
-	repo   repository.Repository
+	repo   Repository
 	logger log.Logger
 }
 
@@ -28,7 +26,7 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func NewService(repo repository.Repository, logger log.Logger) Service {
+func NewService(repo Repository, logger log.Logger) Service {
 	return &LoginService{
 		repo:   repo,
 		logger: logger,
@@ -53,7 +51,7 @@ func (s LoginService) GetSessionToken(userID string, secret []byte) (string, tim
 
 func (s LoginService) CreateUser(ctx context.Context, userId string, name string, email string) (bool, error) {
 	logger := log.With(s.logger, "method", "CreateUser")
-	user := model.User{
+	user := User{
 		UId:      userId,
 		Name:     name,
 		Root_dir: "test",
@@ -66,7 +64,7 @@ func (s LoginService) CreateUser(ctx context.Context, userId string, name string
 	return true, nil
 }
 
-func (s LoginService) GetUser(ctx context.Context, userId string) (bool, model.User, error) {
+func (s LoginService) GetUser(ctx context.Context, userId string) (bool, User, error) {
 	logger := log.With(s.logger, "method", "GetUser")
 	user, err := s.repo.GetUser(ctx, userId)
 	if err != nil {
