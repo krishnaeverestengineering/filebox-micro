@@ -1,0 +1,7 @@
+db:
+  user: "root"
+  password: ""
+  dbName: "filebox"
+client:
+  endpoints:
+    -"http://localhost:8529"
