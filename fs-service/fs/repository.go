@@ -44,7 +44,7 @@ const (
 type Repository interface {
 	CreateUser(context context.Context, userID string) (bool, error)
 	CreateFolder(ctx context.Context, data UserFile) error
-	ListDirectoryFiles(ctx context.Context) error
+	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
 }
 
 func NewRepo(config Config, logger log.Logger) (Repository, error) {
@@ -168,6 +168,7 @@ func (r *repo) CreateUser(ctx context.Context, userID string) (bool, error) {
 		ParentId: "root",
 		Type:     Folder,
 	})
+	//r.db.AbortTransaction()
 	if er != nil {
 		return false, er
 	}
@@ -208,6 +209,34 @@ func (r *repo) CreateFolder(ctx context.Context, data UserFile) error {
 	return nil
 }
 
-func (r *repo) ListDirectoryFiles(ctx context.Context) error {
-	return nil
+func readUserFileDataCursor(c driver.Cursor) []UserFile {
+	data := make([]UserFile, 0)
+	for {
+		var file UserFile
+		_, err := c.ReadDocument(nil, &file)
+		if driver.IsNoMoreDocuments(err) || err != nil {
+			break
+		}
+		data = append(data, file)
+	}
+	return data
+}
+
+func (r *repo) ListDirectoryFiles(ctx context.Context, targetID string, userID string) ([]UserFile, error) {
+	dir := joinStrings(DOC_COLLECTION, userID)
+	query := `FOR doc IN @@collection
+				FILTER doc.id == @targetId
+				FOR v, e, p IN 1..1 OUTBOUND @path GRAPH @graph
+					RETURN v`
+	bindVars := map[string]interface{}{
+		"@collection": dir,
+		"targetId":    targetID,
+		"path":        joinStrings(dir, "/", targetID),
+		"graph":       userID,
+	}
+	cursor, err := r.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	return readUserFileDataCursor(cursor), nil
 }
