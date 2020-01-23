@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-kit/kit/log"
@@ -28,7 +29,9 @@ type UserFile struct {
 	FileID   string   `json:"id"`
 	FileName string   `json:"filename"`
 	ParentId string   `json:"parentId"`
+	RootId   string   `json:"rootId"`
 	Type     FileType `json:"type"`
+	Path     string   `json:"path"`
 }
 
 type DirectoryEdge struct {
@@ -42,6 +45,7 @@ const (
 )
 
 type Repository interface {
+	GetFullPath(ctx context.Context, id string, root string, userID string) string
 	CreateUser(context context.Context, userID string) (bool, error)
 	CreateFolder(ctx context.Context, data UserFile) error
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
@@ -125,7 +129,7 @@ func joinStrings(strs ...string) string {
 
 func getDocumentKey(c context.Context, collection string, id string, db driver.Database) (string, error) {
 	query := `FOR doc IN @@collection
-				FILTER doc.id == @id
+				FILTER doc.path == @id
 					RETURN doc`
 	bindVars := map[string]interface{}{
 		"@collection": collection,
@@ -147,9 +151,38 @@ func getDocumentKey(c context.Context, collection string, id string, db driver.D
 	return "", nil
 }
 
+func (r *repo) GetFullPath(ctx context.Context, id string, rootId string, userID string) string {
+	query := `FOR v, e IN OUTBOUND SHORTEST_PATH @from TO @to GRAPH @graph
+				RETURN v`
+	bindVars := map[string]interface{}{
+		"from":  joinStrings(DOC_COLLECTION, userID, "/", rootId),
+		"to":    joinStrings(DOC_COLLECTION, userID, "/", id),
+		"graph": userID,
+	}
+	cursor, err := r.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return ""
+	}
+	var path string = ""
+	for {
+		var file UserFile
+		_, err := cursor.ReadDocument(nil, &file)
+		if driver.IsNoMoreDocuments(err) || err != nil {
+			break
+		}
+		path = filepath.Join(path, file.FileName)
+	}
+	return path
+}
+
 func (r *repo) CreateUser(ctx context.Context, userID string) (bool, error) {
+	exists, err := r.db.CollectionExists(ctx, joinStrings(DOC_COLLECTION, userID))
+	if exists || err != nil {
+		return true, nil
+	}
 	dCol, err := createUserDocumentCollection(ctx, userID, r.db)
 	if err != nil {
+		fmt.Println(err.Error())
 		return false, err
 	}
 	eCol, err := createUserEdgeCollection(ctx, userID, r.db)
@@ -223,15 +256,22 @@ func readUserFileDataCursor(c driver.Cursor) []UserFile {
 }
 
 func (r *repo) ListDirectoryFiles(ctx context.Context, targetID string, userID string) ([]UserFile, error) {
+	uCol, err := r.db.Collection(ctx, joinStrings(DOC_COLLECTION, userID))
+
+	key, err := getDocumentKey(nil, uCol.Name(), targetID, r.db)
+	if err != nil {
+		return []UserFile{}, err
+	}
+
 	dir := joinStrings(DOC_COLLECTION, userID)
 	query := `FOR doc IN @@collection
-				FILTER doc.id == @targetId
+				FILTER doc.path == @targetId
 				FOR v, e, p IN 1..1 OUTBOUND @path GRAPH @graph
 					RETURN v`
 	bindVars := map[string]interface{}{
 		"@collection": dir,
 		"targetId":    targetID,
-		"path":        joinStrings(dir, "/", targetID),
+		"path":        joinStrings(dir, "/", key),
 		"graph":       userID,
 	}
 	cursor, err := r.db.Query(ctx, query, bindVars)

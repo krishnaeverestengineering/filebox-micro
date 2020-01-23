@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -14,34 +15,40 @@ type Endpoints struct {
 	GetUser    endpoint.Endpoint
 }
 
+type CreateUserSuccessRespose struct {
+	Status          string `json:"status"`
+	IsAuthenticated bool   `json:"is_authenticated"`
+}
+
 func MakeEndPoints(s Service) Endpoints {
 	return Endpoints{
-		CreateUser: makeCreateUserEndPoint(s),
-		GetUser:    makeGetUserEndPoint(s),
+		CreateUser: MakeCreateUserEndPoint(s),
+		GetUser:    MakeGetUserEndPoint(s),
 	}
 }
 
-func makeCreateUserEndPoint(s Service) endpoint.Endpoint {
+func MakeCreateUserEndPoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(CreateUserRequest)
-		var err error
-		var ok bool
-		ok, user, err := s.GetUser(ctx, req.UserID)
+		ok, _, err := s.GetUser(ctx, req.UserID)
 		if gorm.IsRecordNotFoundError(err) {
 			ok, err = s.CreateUser(ctx, req.UserID, req.Name, req.Email)
 		}
+		if err != nil {
+			return nil, err
+		}
 		token, time, err := s.GetSessionToken(req.UserID, []byte("my_sceret"))
 		if err != nil {
-			return CreateUserResponse{Ok: false}, err
+			return CreateUserResponse{Ok: false, IsAuthenticated: false}, err
 		}
-		fmt.Println(token, user)
-		return CreateUserResponse{Ok: ok, Token: token, ExprireAt: time}, err
+		return CreateUserResponse{Ok: ok, Token: token, ExprireAt: time, IsAuthenticated: true}, err
 	}
 }
 
-func makeGetUserEndPoint(s Service) endpoint.Endpoint {
+func MakeGetUserEndPoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(GetUserRequest)
+		fmt.Println("world")
 		ok, user, err := s.GetUser(ctx, req.Id)
 		return GetUserResponse{Ok: ok, Data: user}, err
 	}
@@ -55,8 +62,14 @@ func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 			Value:    res.Token,
 			Expires:  res.ExprireAt,
 			HttpOnly: true,
+			Path:     "/",
 		})
-		_, err := w.Write([]byte("hello"))
+		encoder := json.NewEncoder(w)
+		encoder.SetEscapeHTML(false)
+		err := encoder.Encode(CreateUserSuccessRespose{
+			Status:          "ok",
+			IsAuthenticated: res.IsAuthenticated,
+		})
 		return err
 	}
 	return nil
@@ -64,6 +77,7 @@ func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 
 func DecodeRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	userId := r.URL.Query().Get("userId")
+	fmt.Println(r.Cookie("token"))
 	if userId == "" {
 		return nil, fmt.Errorf("invalid userid")
 	}

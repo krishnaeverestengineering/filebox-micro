@@ -10,9 +10,10 @@ type (
 		Root_dir string `json:"root_dir"`
 	}
 	CreateUserResponse struct {
-		Ok        bool `json:"ok"`
-		Token     string
-		ExprireAt time.Time
+		Ok              bool `json:"ok"`
+		IsAuthenticated bool `json:"is_authenticated"`
+		Token           string
+		ExprireAt       time.Time
 	}
 	GetUserRequest struct {
 		Id string `json:"id"`

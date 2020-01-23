@@ -27,6 +27,7 @@ func main() {
 		config, _ := ls.InitConfig()
 		repo, err := ls.New(config, nil)
 		if err != nil {
+			fmt.Println("failed")
 			os.Exit(-1)
 		}
 		srv = ls.NewService(repo, logger)
@@ -37,8 +38,8 @@ func main() {
 	errs := make(chan error)
 	go func() {
 		handler := ls.NewHTTPServer(ctx, endpoints)
-		fmt.Println("Listening :8080")
-		errs <- http.ListenAndServe("127.0.0.1:8080", handler)
+		fmt.Println("Listening :8081")
+		errs <- http.ListenAndServe("127.0.0.1:8081", handler)
 	}()
 	level.Error(logger).Log("exit", <-errs)
 }

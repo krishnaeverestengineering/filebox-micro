@@ -1,0 +1,133 @@
+{
+    "version": 2,
+    "extra_config": {
+      "github_com/devopsfaith/krakend-cors": {
+        "allow_origins": [
+          "http://127.0.0.1:8081",
+          "http://127.0.0.1:8082",
+          "http://127.0.0.1:9090"
+        ],
+        "expose_headers": [
+          "Content-Length"
+        ],
+        "max_age": "12h",
+        "allow_methods": [
+          "GET",
+          "HEAD",
+          "POST",
+          "OPTIONS"
+        ],
+        "allow_headers": [
+          "Origin",
+          "Authorization",
+          "Content-Type"
+        ]
+      }
+    },
+    "timeout": "3000ms",
+    "cache_ttl": "300s",
+    "output_encoding": "json",
+    "name": "Filebox",
+    "port": 9090,
+    "read_timeout": "10s",
+    "write_timeout": "10s",
+    "idle_timeout": "10s",
+    "read_header_timeout": "10s",
+    "endpoints": [
+      {
+        "endpoint": "/auth",
+        "method": "GET",
+        "output_encoding": "json",
+        "concurrent_calls": 1,
+        "headers_to_pass": [],
+        "querystring_params": [
+          "userId"
+        ],
+        "extra_config": {
+          "github.com/devopsfaith/krakend-jose/validator": {
+            "alg": "HS256",
+            "jwk-url": "http://127.0.0.1:8081/keys.json",
+            "cookie_key": "",
+            "audience": [],
+            "roles": [
+              "user"
+            ],
+            "disable_jwk_security": true,
+            "roles_key": "roles",
+            "issuer": ""
+          }
+        },
+        "backend": [
+          {
+            "url_pattern": "/ServiceLogin",
+            "encoding": "json",
+            "sd": "static",
+            "extra_config": {},
+            "method": "GET",
+            "host": [
+              "http://127.0.0.1:8081"
+            ],
+            "disable_host_sanitize": false
+          }
+        ]
+      },
+      {
+        "endpoint": "/token",
+        "backend": [
+          {
+            "url_pattern": "/token",
+            "encoding": "json",
+            "host": [
+              "http://127.0.0.1:8081"
+            ]
+            
+          }
+        ],
+        "extra_config": {
+          "github.com/devopsfaith/krakend-jose/signer": {
+            "alg": "HS256",
+            "keys-to-sign": [
+              "access_token",
+              "refresh_token"
+            ],
+            "jwk-url": "http://127.0.0.1:8081/keys",
+            "disable_jwk_security": true,
+            "kid": "sim2"
+          }
+        },
+        "output_encoding": "json",
+        "concurrent_calls": 1
+      },
+      {
+        "endpoint": "/private",
+        "method": "GET",
+        "extra_config": {
+          "github.com/devopsfaith/krakend-jose/validator": {
+            "alg": "HS256",
+            "jwk-url": "",
+            "cookie_key": "",
+            "audience": [],
+            "roles": [],
+            "disable_jwk_security": true,
+            "roles_key": "",
+            "issuer": ""
+          }
+        },
+        "output_encoding": "json",
+        "concurrent_calls": 1,
+        "backend": [
+          {
+            "url_pattern": "/private",
+            "encoding": "json",
+            "sd": "static",
+            "extra_config": {},
+            "method": "GET",
+            "host": [
+              "http://127.0.0.1:8081"
+            ],
+            "disable_host_sanitize": false
+          }
+        ]
+      }
+    ]
+  }
