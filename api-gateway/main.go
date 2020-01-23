@@ -70,86 +70,10 @@ func main() {
 		ContentSecurityPolicy: "default-src 'self'",
 		IsDevelopment:         true,
 	})
-	//rf := gorilla.DefaultFactory(proxy.DefaultFactory(logger), logger)
+
 	cfg := gorilla.DefaultConfig(customProxyFactory{logger, proxy.DefaultFactory(logger)}, logger)
 	cfg.Middlewares = append(cfg.Middlewares, secureMiddleware)
 	cfg.HandlerFactory = newHandlerFactory(cfg.HandlerFactory, nil, jose.ChainedRejecterFactory{}, logger)
 	routerFactory := mux.NewFactory(cfg)
 	routerFactory.New().Run(serviceConfig)
 }
-
-/*
-
-func getSessionTokenHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, err := r.Cookie("auth"); err == nil {
-			return
-		}
-		encoder := json.NewEncoder(w)
-		encoder.SetEscapeHTML(false)
-		userId := r.URL.Query().Get("userId")
-		if userId == "null" || userId == "" {
-			encoder.Encode(TokenResponse{
-				Ok: false,
-			})
-			return
-		}
-		c, expiresAt, err := GetSessionToken(userId, []byte("sceret"))
-		if err != nil {
-			encoder.Encode(TokenResponse{
-				Ok: false,
-			})
-			return
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:    "auth",
-			Value:   c,
-			Expires: expiresAt,
-			Path:    "/",
-		})
-		encoder.Encode(TokenResponse{
-			Ok: true,
-		})
-	})
-}
-// type MyHandler struct {
-// }
-
-// type InvalidTokenResponse struct {
-// 	Path string `json:"redirect_path"`
-// }
-
-// func (s *MyHandler) Handler(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		ok := middlewares.TokenValidater(r)
-// 		if !ok {
-// 			encoder := json.NewEncoder(w)
-// 			encoder.SetEscapeHTML(false)
-// 			encoder.Encode(&InvalidTokenResponse{
-// 				Path: "/login",
-// 			})
-// 			return
-// 		}
-// 		next.ServeHTTP(w, r)
-// 	})
-// }
-
-type TokenResponse struct {
-	Ok bool `json"ok"`
-}
-
-func GetSessionToken(uid string, secret []byte) (string, time.Time, error) {
-	expirationTime := time.Now().Add(5 * time.Minute)
-	cliams := &models.AuthTokenClaims{
-		UserId: uid,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, cliams)
-	tokenString, err := token.SignedString(secret)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	return tokenString, expirationTime, nil
-}*/
