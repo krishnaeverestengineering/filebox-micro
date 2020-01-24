@@ -12,29 +12,6 @@ import (
 )
 
 func main() {
-	// c, err := fs.InitConfig()
-	// r, err := fs.NewRepo(c.(fs.Config), nil)
-	// fmt.Println(err, r)
-	// //ok := r.GetFullPath(nil, "123905", "114051", "krishna009")
-	// s := fs.NewService(r, nil)
-	// e := s.CreateFolder(nil, fs.UserFile{
-	// 	ParentId: "123905",
-	// 	RootId:   "114051",
-	// 	UserID:   "krishna009",
-	// 	FileName: "child-1-1",
-	// })
-
-	// fmt.Println(e)
-
-	// var logger log.Logger
-	// {
-	// 	logger = log.NewLogfmtLogger(os.Stderr)
-	// 	logger = log.NewSyncLogger(logger)
-	// 	logger = log.With(logger,
-	// 		"service: ", "authentication",
-	// 		"time: ", log.DefaultTimestampUTC,
-	// 		"caller: ", log.DefaultCaller)
-	// }
 	ctx := context.Background()
 	var logger log.Logger
 	{

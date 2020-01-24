@@ -57,14 +57,10 @@ func EncodeCreateFolderResponse(ctx context.Context, w http.ResponseWriter, resp
 }
 
 func DecodeListDirectoryRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	c, err := DecodeCookie(r)
-	fmt.Println(c, err)
-	if err != nil {
-		//return nil, err
-	}
-	fid := r.URL.Query().Get("folder")
+	fmt.Println(r.Header.Get("Authorization"))
+	fid := r.URL.Query().Get("path")
 	return ListDirectoryRequest{
-		UserId:   c,
+		UserId:   "115223032220880643634",
 		FolderId: fid,
 	}, nil
 }

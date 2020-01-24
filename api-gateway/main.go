@@ -39,11 +39,6 @@ func (cf customProxyFactory) New(cfg *config.EndpointConfig) (p proxy.Proxy, err
 	return
 }
 
-func newHandlerFactory(gf mux.HandlerFactory, pe mux.ParamExtractor, rejecter jose.RejecterFactory, logger logging.Logger) mux.HandlerFactory {
-	hf := muxjose.HandlerFactory(gf, pe, logger, rejecter)
-	return hf
-}
-
 func main() {
 	port := flag.Int("p", 9091, "Port of the service")
 	logLevel := flag.String("l", "DEBUG", "Logging level")
@@ -89,23 +84,17 @@ func main() {
 			return jose.FixedRejecter(false)
 		}),
 	})
+
 	backendFactory := martian.NewBackendFactory(logger, client.DefaultHTTPRequestExecutor(client.NewHTTPClient))
 	cfg := gorilla.DefaultConfig(customProxyFactory{logger, proxy.NewDefaultFactory(backendFactory, logger)}, logger)
 	cfg.Middlewares = append(cfg.Middlewares, secureMiddleware)
-	//temp := cfg.HandlerFactory
-	cfg.HandlerFactory = newHanderFactory(cfg.HandlerFactory, logger, tokenRejecterFactory)
-	//cfg.HandlerFactory = nil
+	cfg.HandlerFactory = newHandlerFactory(cfg.HandlerFactory, logger, tokenRejecterFactory)
 	routerFactory := mux.NewFactory(cfg)
 	routerFactory.New().Run(serviceConfig)
 }
 
-func dummyParamsExtractor(_ *http.Request) map[string]string {
-	return map[string]string{}
-}
-
-func newHanderFactory(mh mux.HandlerFactory, logger logging.Logger, re jose.ChainedRejecterFactory) mux.HandlerFactory {
+func newHandlerFactory(mh mux.HandlerFactory, logger logging.Logger, re jose.ChainedRejecterFactory) mux.HandlerFactory {
 	hf := jujumux.HandlerFactory
-	hf = mh
 	hf = muxjose.HandlerFactory(mh, gorillaParamsExtractor, logger, re)
 	return hf
 }

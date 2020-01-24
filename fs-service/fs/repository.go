@@ -257,6 +257,9 @@ func readUserFileDataCursor(c driver.Cursor) []UserFile {
 
 func (r *repo) ListDirectoryFiles(ctx context.Context, targetID string, userID string) ([]UserFile, error) {
 	uCol, err := r.db.Collection(ctx, joinStrings(DOC_COLLECTION, userID))
+	if err != nil {
+		return []UserFile{}, err
+	}
 
 	key, err := getDocumentKey(nil, uCol.Name(), targetID, r.db)
 	if err != nil {
