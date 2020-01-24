@@ -1,10 +1,16 @@
 {
 	"keys": [
 		{
-            "kty":"oct",
-            "kid":"sim2",
-            "k":"sb5K9F85J_v-TB4HR_BDuex8_-0dxTSkeCd3I6NvGmA",
-            "alg":"HS256"
-        }
+			"kty": "oct",
+			"alg": "A128KW",
+			"k": "GawgguFyGrWKav7AX4VKUg",
+			"kid": "sim1"
+		},
+		{
+			"kty": "oct",
+			"k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
+			"kid": "sim2",
+			"alg": "HS256"
+		}
 	]
 }

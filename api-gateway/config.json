@@ -5,7 +5,7 @@
         "allow_origins": [
           "http://127.0.0.1:8081",
           "http://127.0.0.1:8082",
-          "http://127.0.0.1:9090"
+          "http://127.0.0.1:9091"
         ],
         "expose_headers": [
           "Content-Length"
@@ -20,7 +20,8 @@
         "allow_headers": [
           "Origin",
           "Authorization",
-          "Content-Type"
+          "Content-Type",
+          "Cookie"
         ]
       }
     },
@@ -37,39 +38,54 @@
       {
         "endpoint": "/auth",
         "method": "GET",
-        "output_encoding": "json",
+        "output_encoding": "no-op",
         "concurrent_calls": 1,
-        "headers_to_pass": [],
-        "querystring_params": [
-          "userId"
-        ],
-        "extra_config": {
-          "github.com/devopsfaith/krakend-jose/validator": {
-            "alg": "HS256",
-            "jwk-url": "http://127.0.0.1:8081/keys.json",
-            "cookie_key": "",
-            "audience": [],
-            "roles": [
-              "user"
-            ],
-            "disable_jwk_security": true,
-            "roles_key": "roles",
-            "issuer": ""
-          }
-        },
+        "querystring_params": ["*"],
+        "headers_to_pass":   ["*"],
         "backend": [
           {
             "url_pattern": "/ServiceLogin",
-            "encoding": "json",
-            "sd": "static",
-            "extra_config": {},
-            "method": "GET",
+            "encoding": "no-op",
+            "extra_config": {
+                "github.com/devopsfaith/krakend-martian": {
+                  "fifo.Group": {
+                    "scope": ["request", "response"],
+                    "aggregateErrors": true,
+                    "modifiers": [
+                        {
+                          "header.JwtClaim": {
+                            "scope": ["request"],
+                            "claim": "sub",
+                            "header": "UserID"
+                          }
+                        }
+                    ]
+                  }
+                }
+              },
             "host": [
               "http://127.0.0.1:8081"
             ],
             "disable_host_sanitize": false
           }
-        ]
+        ],
+        "extra_config": {
+          "github.com/devopsfaith/krakend-jose/validator": {
+            "alg": "HS256",
+            "jwk-url": "http://127.0.0.1:8081/keys",
+            "cookie_key": "",
+            "audience": [
+              "http://api.example.com"
+            ],
+            "roles": [
+              "role_a",
+              "role_b"
+            ],
+            "disable_jwk_security": true,
+            "roles_key": "roles",
+            "issuer": "https://krakend.io"
+          }
+        }
       },
       {
         "endpoint": "/token",
@@ -79,8 +95,8 @@
             "encoding": "json",
             "host": [
               "http://127.0.0.1:8081"
-            ]
-            
+            ],
+            "extra_config": {}
           }
         ],
         "extra_config": {
@@ -99,34 +115,87 @@
         "concurrent_calls": 1
       },
       {
-        "endpoint": "/private",
-        "method": "GET",
+        "endpoint": "/create-folder",
+        "method": "POST",
         "extra_config": {
           "github.com/devopsfaith/krakend-jose/validator": {
             "alg": "HS256",
-            "jwk-url": "",
+            "jwk-url": "http://127.0.0.1:8081/keys",
             "cookie_key": "",
-            "audience": [],
-            "roles": [],
+            "audience": [
+              "http://api.example.com"
+            ],
+            "roles": [
+              "role_a",
+              "role_b"
+            ],
             "disable_jwk_security": true,
-            "roles_key": "",
-            "issuer": ""
+            "roles_key": "roles",
+            "issuer": "https://krakend.io"
           }
         },
         "output_encoding": "json",
         "concurrent_calls": 1,
+        "querystring_params": [
+          "path"
+        ],
+        "headers_to_pass": [
+          "Authorization"
+        ],
         "backend": [
           {
-            "url_pattern": "/private",
+            "url_pattern": "/createFolder",
+            "encoding": "json",
+            "sd": "static",
+            "extra_config": {},
+            "method": "POST",
+            "host": [
+              "http://127.0.0.1:8082"
+            ],
+            "disable_host_sanitize": false
+          }
+        ]
+      },
+      {
+        "endpoint": "/ls",
+        "method": "GET",
+        "extra_config": {
+          "github.com/devopsfaith/krakend-jose/validator": {
+            "alg": "HS256",
+            "jwk-url": "http://127.0.0.1:8081/keys",
+            "cookie_key": "",
+            "audience": [
+              "http://api.example.com"
+            ],
+            "roles": [
+              "role_a",
+              "role_b"
+            ],
+            "disable_jwk_security": true,
+            "roles_key": "roles",
+            "issuer": "https://krakend.io"
+          }
+        },
+        "output_encoding": "json",
+        "concurrent_calls": 1,
+        "querystring_params": [
+          "path"
+        ],
+        "backend": [
+          {
+            "url_pattern": "/ls",
             "encoding": "json",
             "sd": "static",
             "extra_config": {},
             "method": "GET",
             "host": [
-              "http://127.0.0.1:8081"
+              "http://127.0.0.1:8082"
             ],
             "disable_host_sanitize": false
           }
+        ],
+        "headers_to_pass": [
+          "Authorization"
         ]
       }
     ]

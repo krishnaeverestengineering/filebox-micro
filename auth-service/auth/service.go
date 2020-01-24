@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/log/level"
@@ -13,7 +12,6 @@ import (
 type Service interface {
 	CreateUser(ctx context.Context, userId string, name string, email string) (bool, error)
 	GetUser(ctx context.Context, userId string) (bool, User, error)
-	GetSessionToken(userID string, secret []byte) (string, time.Time, error)
 }
 
 type LoginService struct {
@@ -31,22 +29,6 @@ func NewService(repo Repository, logger log.Logger) Service {
 		repo:   repo,
 		logger: logger,
 	}
-}
-
-func (s LoginService) GetSessionToken(userID string, secret []byte) (string, time.Time, error) {
-	expirationTime := time.Now().Add(5 * time.Minute)
-	cliams := &Claims{
-		UserName: userID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, cliams)
-	tokenString, err := token.SignedString(secret)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	return tokenString, expirationTime, nil
 }
 
 func (s LoginService) CreateUser(ctx context.Context, userId string, name string, email string) (bool, error) {

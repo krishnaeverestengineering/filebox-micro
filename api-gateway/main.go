@@ -1,18 +1,28 @@
 package main
 
 import (
+	"Filebox-Micro/api-gateway/jujumux"
 	"flag"
-	"log"
-	"os"
-
+	cel "github.com/devopsfaith/krakend-cel"
 	jose "github.com/devopsfaith/krakend-jose"
 	muxjose "github.com/devopsfaith/krakend-jose/mux"
+	_ "github.com/devopsfaith/krakend-martian"
+	martian "github.com/devopsfaith/krakend-martian"
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/logging"
 	"github.com/devopsfaith/krakend/proxy"
 	"github.com/devopsfaith/krakend/router/gorilla"
 	"github.com/devopsfaith/krakend/router/mux"
+	"github.com/devopsfaith/krakend/transport/http/client"
+	_ "github.com/dgrijalva/jwt-go"
+	g "github.com/gorilla/mux"
+	_ "github.com/pismo/martians"
+	_ "gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/unrolled/secure.v1"
+	"log"
+	"net/http"
+	"os"
+	"strings"
 )
 
 type customProxyFactory struct {
@@ -35,7 +45,7 @@ func newHandlerFactory(gf mux.HandlerFactory, pe mux.ParamExtractor, rejecter jo
 }
 
 func main() {
-	port := flag.Int("p", 9090, "Port of the service")
+	port := flag.Int("p", 9091, "Port of the service")
 	logLevel := flag.String("l", "DEBUG", "Logging level")
 	debug := flag.Bool("d", true, "Enable the debug")
 	configFile := flag.String("c", "config.json", "Path to the configuration filename")
@@ -58,7 +68,7 @@ func main() {
 	}
 
 	secureMiddleware := secure.New(secure.Options{
-		AllowedHosts:          []string{"127.0.0.1:9090"},
+		AllowedHosts:          []string{"127.0.0.1:9091"},
 		SSLRedirect:           false,
 		SSLProxyHeaders:       map[string]string{"X-Forwarded-Proto": "https"},
 		STSSeconds:            315360000,
@@ -71,9 +81,39 @@ func main() {
 		IsDevelopment:         true,
 	})
 
-	cfg := gorilla.DefaultConfig(customProxyFactory{logger, proxy.DefaultFactory(logger)}, logger)
+	tokenRejecterFactory := jose.ChainedRejecterFactory([]jose.RejecterFactory{
+		jose.RejecterFactoryFunc(func(l logging.Logger, cfg *config.EndpointConfig) jose.Rejecter {
+			if r := cel.NewRejecter(l, cfg); r != nil {
+				return r
+			}
+			return jose.FixedRejecter(false)
+		}),
+	})
+	backendFactory := martian.NewBackendFactory(logger, client.DefaultHTTPRequestExecutor(client.NewHTTPClient))
+	cfg := gorilla.DefaultConfig(customProxyFactory{logger, proxy.NewDefaultFactory(backendFactory, logger)}, logger)
 	cfg.Middlewares = append(cfg.Middlewares, secureMiddleware)
-	cfg.HandlerFactory = newHandlerFactory(cfg.HandlerFactory, nil, jose.ChainedRejecterFactory{}, logger)
+	//temp := cfg.HandlerFactory
+	cfg.HandlerFactory = newHanderFactory(cfg.HandlerFactory, logger, tokenRejecterFactory)
+	//cfg.HandlerFactory = nil
 	routerFactory := mux.NewFactory(cfg)
 	routerFactory.New().Run(serviceConfig)
+}
+
+func dummyParamsExtractor(_ *http.Request) map[string]string {
+	return map[string]string{}
+}
+
+func newHanderFactory(mh mux.HandlerFactory, logger logging.Logger, re jose.ChainedRejecterFactory) mux.HandlerFactory {
+	hf := jujumux.HandlerFactory
+	hf = mh
+	hf = muxjose.HandlerFactory(mh, gorillaParamsExtractor, logger, re)
+	return hf
+}
+
+func gorillaParamsExtractor(r *http.Request) map[string]string {
+	params := map[string]string{}
+	for key, value := range g.Vars(r) {
+		params[strings.Title(key)] = value
+	}
+	return params
 }

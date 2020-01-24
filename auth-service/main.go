@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/gorilla/handlers"
 )
 
 func main() {
@@ -42,4 +43,21 @@ func main() {
 		errs <- http.ListenAndServe("127.0.0.1:8081", handler)
 	}()
 	level.Error(logger).Log("exit", <-errs)
+}
+
+func getCORS() func(http.Handler) http.Handler {
+	return handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"PUT", "PATCH", "GET", "POST", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{
+			"Origin",
+			"Content-Type",
+			"X-Requested-With",
+		}),
+		handlers.ExposedHeaders([]string{"Content-Length", "Set-Cookie", "Cookie"}),
+		handlers.AllowCredentials(),
+		handlers.AllowedOriginValidator(func(origin string) bool {
+			return origin == "http://127.0.0.1:3000"
+		}),
+	)
 }
