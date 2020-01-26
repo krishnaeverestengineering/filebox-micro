@@ -3,9 +3,9 @@
     "extra_config": {
       "github_com/devopsfaith/krakend-cors": {
         "allow_origins": [
+          "http://me.filebox.com:3000/",
           "http://127.0.0.1:8081",
-          "http://127.0.0.1:8082",
-          "http://127.0.0.1:9091"
+          "http://127.0.0.1:8082"
         ],
         "expose_headers": [
           "Content-Length"
@@ -13,23 +13,28 @@
         "max_age": "12h",
         "allow_methods": [
           "GET",
-          "HEAD",
           "POST",
-          "OPTIONS"
+          "PUT",
+          "OPTIONS",
+          "PATCH"
         ],
         "allow_headers": [
           "Origin",
-          "Authorization",
           "Content-Type",
-          "Cookie"
-        ]
+          "Authorization",
+          "X-Requested-With"
+        ],
+        "allow_origin_func": [
+          "http://me.filebox.com:3000",
+          "http://localhost:3000"
+        ],
+        "allow_credentials": true
       }
     },
     "timeout": "3000ms",
-    "cache_ttl": "300s",
     "output_encoding": "json",
     "name": "Filebox",
-    "port": 9090,
+    "port": 9091,
     "read_timeout": "10s",
     "write_timeout": "10s",
     "idle_timeout": "10s",
@@ -38,35 +43,74 @@
       {
         "endpoint": "/auth",
         "method": "GET",
-        "output_encoding": "no-op",
+        "output_encoding": "json",
         "concurrent_calls": 1,
-        "querystring_params": ["*"],
-        "headers_to_pass":   ["*"],
+        "querystring_params": [],
+        "headers_to_pass": [
+          "*"
+        ],
         "backend": [
           {
             "url_pattern": "/ServiceLogin",
-            "encoding": "no-op",
+            "encoding": "json",
             "extra_config": {
-                "github.com/devopsfaith/krakend-martian": {
-                  "fifo.Group": {
-                    "scope": ["request", "response"],
-                    "aggregateErrors": true,
-                    "modifiers": [
-                        {
-                          "header.JwtClaim": {
-                            "scope": ["request"],
-                            "claim": "sub",
-                            "header": "UserID"
-                          }
-                        }
-                    ]
-                  }
+              "github.com/devopsfaith/krakend-martian": {
+                "fifo.Group": {
+                  "scope": [
+                    "request",
+                    "response"
+                  ],
+                  "aggregateErrors": true,
+                  "modifiers": [
+                    {
+                      "header.JwtClaim": {
+                        "scope": [
+                          "request"
+                        ],
+                        "claim": "sub",
+                        "header": "UserID"
+                      }
+                    }
+                  ]
                 }
-              },
+              }
+            },
             "host": [
               "http://127.0.0.1:8081"
             ],
-            "disable_host_sanitize": false
+            "disable_host_sanitize": false,
+            "method": "GET"
+          },
+          {
+            "url_pattern": "/createUser",
+            "encoding": "json",
+            "extra_config": {
+              "github.com/devopsfaith/krakend-martian": {
+                "fifo.Group": {
+                  "scope": [
+                    "request",
+                    "response"
+                  ],
+                  "aggregateErrors": true,
+                  "modifiers": [
+                    {
+                      "header.JwtClaim": {
+                        "scope": [
+                          "request"
+                        ],
+                        "claim": "sub",
+                        "header": "UserID"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "host": [
+              "http://127.0.0.1:8082"
+            ],
+            "disable_host_sanitize": false,
+            "method": "GET"
           }
         ],
         "extra_config": {
@@ -89,6 +133,9 @@
       },
       {
         "endpoint": "/token",
+        "headers_to_pass": [
+          "*"
+        ],
         "backend": [
           {
             "url_pattern": "/token",
@@ -117,6 +164,9 @@
       {
         "endpoint": "/create-folder",
         "method": "POST",
+        "headers_to_pass": [
+          "*"
+        ],
         "extra_config": {
           "github.com/devopsfaith/krakend-jose/validator": {
             "alg": "HS256",
@@ -136,18 +186,32 @@
         },
         "output_encoding": "json",
         "concurrent_calls": 1,
-        "querystring_params": [
-          "path"
-        ],
-        "headers_to_pass": [
-          "Authorization"
-        ],
         "backend": [
           {
             "url_pattern": "/createFolder",
             "encoding": "json",
-            "sd": "static",
-            "extra_config": {},
+            "extra_config": {
+              "github.com/devopsfaith/krakend-martian": {
+                "fifo.Group": {
+                  "scope": [
+                    "request",
+                    "response"
+                  ],
+                  "aggregateErrors": true,
+                  "modifiers": [
+                    {
+                      "header.JwtClaim": {
+                        "scope": [
+                          "request"
+                        ],
+                        "claim": "sub",
+                        "header": "UserID"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
             "method": "POST",
             "host": [
               "http://127.0.0.1:8082"
@@ -174,6 +238,26 @@
             "disable_jwk_security": true,
             "roles_key": "roles",
             "issuer": "https://krakend.io"
+          },
+          "github.com/devopsfaith/krakend-martian": {
+            "fifo.Group": {
+              "scope": [
+                "request",
+                "response"
+              ],
+              "aggregateErrors": true,
+              "modifiers": [
+                {
+                  "header.JwtClaim": {
+                    "scope": [
+                      "request"
+                    ],
+                    "claim": "sub",
+                    "header": "UserID"
+                  }
+                }
+              ]
+            }
           }
         },
         "output_encoding": "json",
@@ -185,8 +269,18 @@
           {
             "url_pattern": "/ls",
             "encoding": "json",
-            "sd": "static",
-            "extra_config": {},
+            "extra_config": {
+              "github.com/devopsfaith/krakend/proxy": {
+                "flatmap_filter": [
+                  {
+                    "type": "del",
+                    "args": [
+                      "files.*.userId"
+                    ]
+                  }
+                ]
+              }
+            },
             "method": "GET",
             "host": [
               "http://127.0.0.1:8082"
@@ -198,5 +292,6 @@
           "Authorization"
         ]
       }
-    ]
+    ],
+    "cache_ttl": "10ms"
   }

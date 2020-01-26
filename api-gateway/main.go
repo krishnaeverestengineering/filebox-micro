@@ -3,7 +3,14 @@ package main
 import (
 	"Filebox-Micro/api-gateway/jujumux"
 	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
 	cel "github.com/devopsfaith/krakend-cel"
+	muxcors "github.com/devopsfaith/krakend-cors/mux"
 	jose "github.com/devopsfaith/krakend-jose"
 	muxjose "github.com/devopsfaith/krakend-jose/mux"
 	_ "github.com/devopsfaith/krakend-martian"
@@ -19,10 +26,6 @@ import (
 	_ "github.com/pismo/martians"
 	_ "gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/unrolled/secure.v1"
-	"log"
-	"net/http"
-	"os"
-	"strings"
 )
 
 type customProxyFactory struct {
@@ -56,14 +59,14 @@ func main() {
 	if *port != 0 {
 		serviceConfig.Port = *port
 	}
-
+	fmt.Println(serviceConfig.ExtraConfig)
 	logger, err := logging.NewLogger(*logLevel, os.Stdout, "[KRAKEND]")
 	if err != nil {
 		log.Fatal("ERROR:", err.Error())
 	}
 
 	secureMiddleware := secure.New(secure.Options{
-		AllowedHosts:          []string{"127.0.0.1:9091"},
+		AllowedHosts:          []string{"localhost:9091"},
 		SSLRedirect:           false,
 		SSLProxyHeaders:       map[string]string{"X-Forwarded-Proto": "https"},
 		STSSeconds:            315360000,
@@ -76,6 +79,8 @@ func main() {
 		IsDevelopment:         true,
 	})
 
+	cors := muxcors.New(serviceConfig.ExtraConfig)
+
 	tokenRejecterFactory := jose.ChainedRejecterFactory([]jose.RejecterFactory{
 		jose.RejecterFactoryFunc(func(l logging.Logger, cfg *config.EndpointConfig) jose.Rejecter {
 			if r := cel.NewRejecter(l, cfg); r != nil {
@@ -87,7 +92,7 @@ func main() {
 
 	backendFactory := martian.NewBackendFactory(logger, client.DefaultHTTPRequestExecutor(client.NewHTTPClient))
 	cfg := gorilla.DefaultConfig(customProxyFactory{logger, proxy.NewDefaultFactory(backendFactory, logger)}, logger)
-	cfg.Middlewares = append(cfg.Middlewares, secureMiddleware)
+	cfg.Middlewares = append(cfg.Middlewares, secureMiddleware, cors)
 	cfg.HandlerFactory = newHandlerFactory(cfg.HandlerFactory, logger, tokenRejecterFactory)
 	routerFactory := mux.NewFactory(cfg)
 	routerFactory.New().Run(serviceConfig)

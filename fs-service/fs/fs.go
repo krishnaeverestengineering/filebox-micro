@@ -1,10 +1,11 @@
 package fs
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 )
+
+var root string = "storage"
 
 type FileSystem interface {
 	CreateFolder(path string, name string)
@@ -13,9 +14,11 @@ type FileSystem interface {
 	DeleteFile()
 }
 
-func CreateFolder(path string, name string) error {
-	dir := filepath.Join(path, name)
-	fmt.Println(dir)
+func CreateFolder(userID string) error {
+	dir := filepath.Join(root, userID)
+	if checkDirIfNotExists(root) {
+		os.Mkdir(root, os.ModePerm)
+	}
 	if checkDirIfNotExists(dir) {
 		err := os.Mkdir(dir, os.ModePerm)
 		if err != nil {

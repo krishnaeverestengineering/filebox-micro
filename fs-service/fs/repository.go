@@ -29,7 +29,6 @@ type UserFile struct {
 	FileID   string   `json:"id"`
 	FileName string   `json:"filename"`
 	ParentId string   `json:"parentId"`
-	RootId   string   `json:"rootId"`
 	Type     FileType `json:"type"`
 	Path     string   `json:"path"`
 }
@@ -47,7 +46,7 @@ const (
 type Repository interface {
 	GetFullPath(ctx context.Context, id string, root string, userID string) string
 	CreateUser(context context.Context, userID string) (bool, error)
-	CreateFolder(ctx context.Context, data UserFile) error
+	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
 }
 
@@ -129,7 +128,7 @@ func joinStrings(strs ...string) string {
 
 func getDocumentKey(c context.Context, collection string, id string, db driver.Database) (string, error) {
 	query := `FOR doc IN @@collection
-				FILTER doc.path == @id
+				FILTER doc.id == @id
 					RETURN doc`
 	bindVars := map[string]interface{}{
 		"@collection": collection,
@@ -194,11 +193,11 @@ func (r *repo) CreateUser(ctx context.Context, userID string) (bool, error) {
 		return false, err
 	}
 	fmt.Println(graph.Name())
-	er := r.CreateFolder(ctx, UserFile{
+	_, er := r.CreateFolder(ctx, UserFile{
 		UserID:   userID,
-		FileID:   NewHash(userID),
-		FileName: "Root Folder",
-		ParentId: "root",
+		FileID:   "/",
+		FileName: "/",
+		ParentId: "/",
 		Type:     Folder,
 	})
 	//r.db.AbortTransaction()
@@ -208,38 +207,48 @@ func (r *repo) CreateUser(ctx context.Context, userID string) (bool, error) {
 	return true, nil
 }
 
-func (r *repo) CreateFolder(ctx context.Context, data UserFile) error {
+func (r *repo) CreateFolder(ctx context.Context, data UserFile) (interface{}, error) {
 	graph, err := r.db.Graph(ctx, data.UserID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	eCol, _, err := graph.EdgeCollection(ctx, joinStrings(EDGE_COLLECTION, data.UserID))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	uCol, err := r.db.Collection(ctx, joinStrings(DOC_COLLECTION, data.UserID))
+	uCol, err := r.db.Collection(context.Background(), joinStrings(DOC_COLLECTION, data.UserID))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	meta, err := uCol.CreateDocument(ctx, data)
+	meta, err := uCol.CreateDocument(context.Background(), UserFile{
+		FileName: data.FileName,
+		FileID:   data.FileID,
+		Path:     data.FileName,
+		Type:     Folder,
+		ParentId: data.ParentId,
+		UserID:   data.UserID,
+	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	key, err := getDocumentKey(nil, uCol.Name(), data.ParentId, r.db)
+	key, err := getDocumentKey(context.Background(), uCol.Name(), data.ParentId, r.db)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	from := joinStrings(uCol.Name(), "/", key)
 	to := joinStrings(uCol.Name(), "/", meta.Key)
-	eMeta, err := eCol.CreateDocument(nil, DirectoryEdge{
+	eMeta, err := eCol.CreateDocument(context.Background(), DirectoryEdge{
 		UserID: data.UserID,
 		EdgeDocument: &driver.EdgeDocument{
 			From: driver.DocumentID(from),
 			To:   driver.DocumentID(to),
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println(eMeta, meta)
-	return nil
+	return r.ListDirectoryFiles(ctx, data.ParentId, data.UserID)
 }
 
 func readUserFileDataCursor(c driver.Cursor) []UserFile {
@@ -256,26 +265,16 @@ func readUserFileDataCursor(c driver.Cursor) []UserFile {
 }
 
 func (r *repo) ListDirectoryFiles(ctx context.Context, targetID string, userID string) ([]UserFile, error) {
-	uCol, err := r.db.Collection(ctx, joinStrings(DOC_COLLECTION, userID))
-	if err != nil {
-		return []UserFile{}, err
-	}
-
-	key, err := getDocumentKey(nil, uCol.Name(), targetID, r.db)
-	if err != nil {
-		return []UserFile{}, err
-	}
-
 	dir := joinStrings(DOC_COLLECTION, userID)
 	query := `FOR doc IN @@collection
-				FILTER doc.path == @targetId
-				FOR v, e, p IN 1..1 OUTBOUND @path GRAPH @graph
-					RETURN v`
+				FILTER doc.id == @targetId
+				FOR v, e, p IN 1..1 OUTBOUND doc._id GRAPH @gh
+					FILTER v.id != "/"
+						RETURN v`
 	bindVars := map[string]interface{}{
 		"@collection": dir,
 		"targetId":    targetID,
-		"path":        joinStrings(dir, "/", key),
-		"graph":       userID,
+		"gh":          userID,
 	}
 	cursor, err := r.db.Query(ctx, query, bindVars)
 	if err != nil {

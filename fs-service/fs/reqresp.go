@@ -12,7 +12,7 @@ type CreateUserRespose struct {
 }
 
 func DecodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	userId := r.URL.Query().Get("userId")
+	userId := r.Header.Get("UserID")
 	if userId == "" {
 		return nil, fmt.Errorf("invalid userid")
 	}
@@ -37,23 +37,29 @@ func EncodeCreateUserResponse(ctx context.Context, w http.ResponseWriter, respon
 }
 
 func DecodeCreateFolderRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	c, err := DecodeCookie(r)
-	fmt.Println(c, err)
-	if err != nil {
-		return nil, err
+	userId := r.Header.Get("UserID")
+	if userId == "" {
+		return nil, fmt.Errorf("UserId not valid")
 	}
+	decoder := json.NewDecoder(r.Body)
+	var data CreateFolderPostBody
+	err := decoder.Decode(&data)
+	if err != nil {
+		return nil, fmt.Errorf("data not valid")
+	}
+	fmt.Println(data)
 	return CreateFolderRequest{
-		UserID: c,
+		UserID:   userId,
+		ParentID: data.ParenntId,
+		Name:     data.FolderName,
 	}, nil
 }
 
 func EncodeCreateFolderResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	res := response.(CreateFolderResponse)
-	if res.Ok {
-		_, err := w.Write([]byte("hello"))
-		return err
-	}
-	return nil
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(res)
 }
 
 func DecodeListDirectoryRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -67,7 +73,6 @@ func DecodeListDirectoryRequest(ctx context.Context, r *http.Request) (interface
 
 func EncodeListDirectoryResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	res := response.(ListDirectoryResponse)
-	fmt.Println(res.Files)
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
 	return encoder.Encode(res)

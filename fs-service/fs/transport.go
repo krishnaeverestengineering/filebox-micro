@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"Filebox-Micro/fs-service/utils"
 	"context"
 	"fmt"
 
@@ -8,6 +9,10 @@ import (
 )
 
 type (
+	CreateFolderPostBody struct {
+		FolderName string `json:"name"`
+		ParenntId  string `json:"pid"`
+	}
 	CreateUserRequest struct {
 		UserID string
 	}
@@ -16,12 +21,12 @@ type (
 	}
 	CreateFolderRequest struct {
 		UserID   string `json:"userId"`
-		FolderId string `json:"fid"`
 		Name     string `json:"name"`
 		ParentID string `json:"pid"`
 	}
 	CreateFolderResponse struct {
-		Ok bool `json:"ok"`
+		Ok    bool       `json:"ok"`
+		Files []UserFile `json:"files"`
 	}
 
 	ListDirectoryRequest struct {
@@ -71,16 +76,16 @@ func makeCreateUserEndPoint(s Service) endpoint.Endpoint {
 func makeCreateFolderEndPoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(CreateFolderRequest)
-		err := s.CreateFolder(ctx, UserFile{
+		files, err := s.CreateFolder(ctx, UserFile{
 			UserID:   req.UserID,
-			FileID:   req.FolderId,
 			FileName: req.Name,
 			ParentId: req.ParentID,
+			FileID:   utils.NewHMAC(),
 		})
 		if err != nil {
-			return nil, err
+			return CreateFolderResponse{Ok: false, Files: []UserFile{}}, err
 		}
-		return CreateFolderResponse{Ok: false}, nil
+		return CreateFolderResponse{Ok: true, Files: files.([]UserFile)}, nil
 	}
 }
 

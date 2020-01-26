@@ -2,14 +2,13 @@ package fs
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-kit/kit/log"
 )
 
 type Service interface {
 	CreateUser(ctx context.Context, userId string) (bool, error)
-	CreateFolder(ctx context.Context, data UserFile) error
+	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
 }
 
@@ -29,22 +28,20 @@ func (s *FSService) CreateUser(ctx context.Context, userId string) (bool, error)
 	return s.repo.CreateUser(ctx, userId)
 }
 
-func (s *FSService) CreateFolder(ctx context.Context, data UserFile) error {
-	path := s.repo.GetFullPath(nil, data.ParentId, data.RootId, data.UserID)
-	if path == "" {
-		return fmt.Errorf("path is empty", nil)
-	}
-	err := CreateFolder(path, data.FileName)
-	if err != nil {
-		return err
-	}
-	e := s.repo.CreateFolder(ctx, data)
+func (s *FSService) CreateFolder(ctx context.Context, data UserFile) (interface{}, error) {
+	// path := s.repo.GetFullPath(nil, data.ParentId, data.ParentId, data.UserID)
+	// if path == "" {
+	// 	return fmt.Errorf("path is empty", nil)
+	// }
+	// err := CreateFolder(data.UserID, data)
+	// if err != nil {
+	// 	return err
+	// }
+	files, e := s.repo.CreateFolder(ctx, data)
 	if e != nil {
-		return e
+		return nil, e
 	}
-
-	fmt.Println(path)
-	return nil
+	return files, nil
 }
 
 func (s *FSService) ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error) {
