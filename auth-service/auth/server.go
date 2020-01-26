@@ -34,6 +34,7 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	json.NewEncoder(w).Encode(objmap)
+	fmt.Println(w.Header())
 }
 
 func keysHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +51,7 @@ func keysHandler(w http.ResponseWriter, r *http.Request) {
 func commonMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
+		//w.Header().Add("Access-Control-Allow-Origin", "http://me.filebox.com:3000")
 		next.ServeHTTP(w, r)
 	})
 }

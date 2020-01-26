@@ -10,6 +10,7 @@ import (
 type CreateUserSuccessRespose struct {
 	Status          string `json:"status"`
 	IsAuthenticated bool   `json:"is_authenticated"`
+	Path            string `json:"path"`
 }
 
 func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -20,6 +21,7 @@ func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 		err := encoder.Encode(CreateUserSuccessRespose{
 			Status:          "ok",
 			IsAuthenticated: res.IsAuthenticated,
+			Path:            "/",
 		})
 		return err
 	}
