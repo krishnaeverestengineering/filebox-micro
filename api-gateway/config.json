@@ -133,6 +133,7 @@
       },
       {
         "endpoint": "/token",
+        "method": "POST",
         "headers_to_pass": [
           "*"
         ],
@@ -140,6 +141,7 @@
           {
             "url_pattern": "/token",
             "encoding": "json",
+            "method": "POST",
             "host": [
               "http://127.0.0.1:8081"
             ],
@@ -238,26 +240,6 @@
             "disable_jwk_security": true,
             "roles_key": "roles",
             "issuer": "https://krakend.io"
-          },
-          "github.com/devopsfaith/krakend-martian": {
-            "fifo.Group": {
-              "scope": [
-                "request",
-                "response"
-              ],
-              "aggregateErrors": true,
-              "modifiers": [
-                {
-                  "header.JwtClaim": {
-                    "scope": [
-                      "request"
-                    ],
-                    "claim": "sub",
-                    "header": "UserID"
-                  }
-                }
-              ]
-            }
           }
         },
         "output_encoding": "json",
@@ -279,6 +261,26 @@
                     ]
                   }
                 ]
+              },
+              "github.com/devopsfaith/krakend-martian": {
+                "fifo.Group": {
+                  "scope": [
+                    "request",
+                    "response"
+                  ],
+                  "aggregateErrors": true,
+                  "modifiers": [
+                    {
+                      "header.JwtClaim": {
+                        "scope": [
+                          "request"
+                        ],
+                        "claim": "sub",
+                        "header": "UserID"
+                      }
+                    }
+                  ]
+                }
               }
             },
             "method": "GET",

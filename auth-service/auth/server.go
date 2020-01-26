@@ -20,21 +20,13 @@ func NewHTTPServer(ctx context.Context, endpoints Endpoints) http.Handler {
 		DecodeRequest,
 		EncodeResponse,
 	))
-	r.Methods("GET").Path("/token").HandlerFunc(tokenHandler)
+	r.Methods("POST").Path("/token").Handler(kithttp.NewServer(
+		endpoints.GetToken,
+		DecodeGetTokenRequest,
+		EncodeGetTokenResponse,
+	))
 	r.Methods("GET").Path("/keys").HandlerFunc(keysHandler)
 	return r
-}
-
-func tokenHandler(w http.ResponseWriter, r *http.Request) {
-	b, _ := ioutil.ReadFile("./token.json")
-	rawIn := json.RawMessage(string(b))
-	var objmap map[string]*json.RawMessage
-	err := json.Unmarshal(rawIn, &objmap)
-	if err != nil {
-		fmt.Println(err)
-	}
-	json.NewEncoder(w).Encode(objmap)
-	fmt.Println(w.Header())
 }
 
 func keysHandler(w http.ResponseWriter, r *http.Request) {
