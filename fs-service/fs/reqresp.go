@@ -55,9 +55,12 @@ func DecodeCreateFolderRequest(ctx context.Context, r *http.Request) (interface{
 }
 
 func EncodeCreateFolderResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	res := response.(CreateFolderResponse)
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
+	if response == nil {
+		return encoder.Encode("Folder already exist")
+	}
+	res := response.(CreateFolderResponse)
 	return encoder.Encode(res)
 }
 

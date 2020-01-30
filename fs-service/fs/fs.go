@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -16,23 +17,24 @@ type FileSystem interface {
 
 func CreateFolder(userID string, path string, name string) error {
 	dir := filepath.Join(root, userID, path, name)
-	if checkDirIfNotExists(root) {
+	if !exists(root) {
 		os.Mkdir(root, os.ModePerm)
 	}
-	if checkDirIfNotExists(filepath.Join(root, userID)) {
+	if !exists(filepath.Join(root, userID)) {
 		os.Mkdir(filepath.Join(root, userID), os.ModePerm)
 	}
-	if checkDirIfNotExists(dir) {
+	if !exists(dir) {
 		err := os.Mkdir(dir, os.ModePerm)
 		if err != nil {
 			return err
 		}
+		return nil
 	}
-	return nil
+	return fmt.Errorf("Folder already exists")
 }
 
 func DeleteFolder(dir string) {
-	if !checkDirIfNotExists(dir) {
+	if exists(dir) {
 		err := os.Remove(dir)
 		if err != nil {
 			panic(err)
@@ -47,9 +49,7 @@ func CreateFile() {
 func DeleteFile() {
 }
 
-func checkDirIfNotExists(dir string) bool {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return true
-	}
-	return false
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
