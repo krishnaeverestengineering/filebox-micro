@@ -33,13 +33,14 @@ func CreateFolder(userID string, path string, name string) error {
 	return fmt.Errorf("Folder already exists")
 }
 
-func DeleteFolder(dir string) {
-	if exists(dir) {
-		err := os.Remove(dir)
-		if err != nil {
-			panic(err)
-		}
+func DeleteFolder(dir string, name string, uid string) error {
+	fullPath := filepath.Join(root, uid, dir)
+	fmt.Println(exists(fullPath))
+	if exists(fullPath) {
+		err := os.RemoveAll(fullPath)
+		return err
 	}
+	return fmt.Errorf("File or Folder not found")
 }
 
 func CreateFile() {

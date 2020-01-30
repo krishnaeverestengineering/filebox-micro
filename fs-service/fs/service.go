@@ -11,7 +11,7 @@ type Service interface {
 	CreateUser(ctx context.Context, userId string) (bool, error)
 	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
-	DeleteFileOrDirectory(ctx context.Context, fid string, userID string) error
+	DeleteFileOrDirectory(ctx context.Context, fid string, fname string, userID string) error
 }
 
 type FSService struct {
@@ -51,7 +51,15 @@ func (s *FSService) ListDirectoryFiles(ctx context.Context, id string, userID st
 	return s.repo.ListDirectoryFiles(ctx, id, userID)
 }
 
-func (s *FSService) DeleteFileOrDirectory(ctx context.Context, fid string, userID string) error {
+func (s *FSService) DeleteFileOrDirectory(ctx context.Context, fid string, fname string, userID string) error {
+	path := s.repo.GetFullPath(nil, fid, "/", userID)
+	if path == "" {
+		return fmt.Errorf("path is empty")
+	}
+	err := DeleteFolder(path, fname, userID)
+	if err != nil {
+		return err
+	}
 	s.repo.DeleteFileOrFolder(ctx, fid, userID)
 	return nil
 }

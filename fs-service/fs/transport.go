@@ -37,6 +37,16 @@ type (
 		Ok    bool       `json:"ok"`
 		Files []UserFile `json:"files"`
 	}
+
+	DeleteFileRequest struct {
+		FileId string `json:"fid"`
+		Name   string `json:"name"`
+		UserID string
+	}
+
+	DeleteFileResponse struct {
+		Ok bool `json:"ok"`
+	}
 )
 
 type File struct {
@@ -104,7 +114,11 @@ func makeListDirectoryEndPoint(s Service) endpoint.Endpoint {
 
 func makeDeleteFileOrFolderEndPoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		s.DeleteFileOrDirectory(nil, "", "")
-		return ListDirectoryResponse{}, nil
+		req := request.(DeleteFileRequest)
+		err := s.DeleteFileOrDirectory(ctx, req.FileId, req.Name, req.UserID)
+		if err != nil {
+			return DeleteFileResponse{Ok: false}, err
+		}
+		return DeleteFileResponse{Ok: true}, nil
 	}
 }

@@ -48,7 +48,7 @@ type Repository interface {
 	CreateUser(context context.Context, userID string) (bool, error)
 	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
-	DeleteFileOrFolder(ctx context.Context, targetID string, userID string)
+	DeleteFileOrFolder(ctx context.Context, targetID string, userID string) error
 }
 
 func NewRepo(config Config, logger log.Logger) (Repository, error) {
@@ -287,36 +287,30 @@ func (r *repo) ListDirectoryFiles(ctx context.Context, targetID string, userID s
 	return readUserFileDataCursor(cursor), nil
 }
 
-func (r *repo) DeleteFileOrFolder(ctx context.Context, targetID string, userID string) {
-	// dir := joinStrings(DOC_COLLECTION, userID)
-	// query := `FOR doc in @@collection
-	// 			FILTER doc.id == @targetId
-	// action := `function (params) {
-	// 	var db = require('@arangodb').db;
-	// 	db._query('FOR i IN doc_113176837686976104031 RETURN i');
-	// }`
+func (r *repo) DeleteFileOrFolder(ctx context.Context, targetID string, userID string) error {
+	col := joinStrings(DOC_COLLECTION, userID)
+	key, err := getDocumentKey(ctx, col, targetID, r.db)
+	if err != nil {
+		return err
+	}
 
-	// d, err := r.db.Transaction(nil, action, &driver.TransactionOptions{
-	// 	ReadCollections: []string{
-	// 		"doc_113176837686976104031",
-	// 	},
-	// 	WaitForSync: true,
-	// })
-	// fmt.Println(d, err)
-	// key, err := getDocumentKey(ctx, joinStrings(DOC_COLLECTION, userID), targetID, r.db)
-	// if err != nil {
-	// 	return
-	// }
-	// eCol, err := r.db.Collection(ctx, joinStrings(EDGE_COLLECTION, userID))
-	// if err != nil {
-	// 	return
-	// }
-	// removeEdgeQuery := `FOR doc IN @@collection
-	// 						FILTER doc.id == @targetID
-	// 							`
+	query := `	LET edgeKeys = (FOR v, e IN 1..1 ANY @deleteKey GRAPH @graph
+					REMOVE e._key IN @@edgeCollection)
+				LET docs = (FOR doc IN @@docCollection
+							FILTER doc.id == @targetId OR doc.parentId == @targetId
+							REMOVE doc in @@docCollection)
+				RETURN {
+				ek: edgeKeys,
+				dk: docs
+				}`
 
-}
-
-func deleteEdge() {
-
+	bindVars := map[string]interface{}{
+		"@docCollection":  col,
+		"@edgeCollection": joinStrings(EDGE_COLLECTION, userID),
+		"graph":           userID,
+		"deleteKey":       joinStrings(DOC_COLLECTION, userID, "/", key),
+		"targetId":        targetID,
+	}
+	_, er := r.db.Query(ctx, query, bindVars)
+	return er
 }

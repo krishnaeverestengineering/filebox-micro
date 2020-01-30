@@ -82,15 +82,18 @@ func EncodeListDirectoryResponse(ctx context.Context, w http.ResponseWriter, res
 
 func DecodeDeleteRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	uid := r.Header.Get("UserID")
-	fid := r.URL.Query().Get("path")
-	return ListDirectoryRequest{
-		UserId:   uid,
-		FolderId: fid,
-	}, nil
+	decoder := json.NewDecoder(r.Body)
+	var data DeleteFileRequest
+	err := decoder.Decode(&data)
+	if err != nil {
+		return nil, fmt.Errorf("data not valid")
+	}
+	data.UserID = uid
+	return data, nil
 }
 
 func EncodeDeleteResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	res := response.(ListDirectoryResponse)
+	res := response.(DeleteFileResponse)
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
 	return encoder.Encode(res)
