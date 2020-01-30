@@ -14,10 +14,13 @@ type FileSystem interface {
 	DeleteFile()
 }
 
-func CreateFolder(userID string) error {
-	dir := filepath.Join(root, userID)
+func CreateFolder(userID string, path string, name string) error {
+	dir := filepath.Join(root, userID, path, name)
 	if checkDirIfNotExists(root) {
 		os.Mkdir(root, os.ModePerm)
+	}
+	if checkDirIfNotExists(filepath.Join(root, userID)) {
+		os.Mkdir(filepath.Join(root, userID), os.ModePerm)
 	}
 	if checkDirIfNotExists(dir) {
 		err := os.Mkdir(dir, os.ModePerm)

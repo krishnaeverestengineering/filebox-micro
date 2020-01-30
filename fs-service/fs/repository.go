@@ -48,6 +48,7 @@ type Repository interface {
 	CreateUser(context context.Context, userID string) (bool, error)
 	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
+	DeleteFileOrFolder(ctx context.Context, targetID string, userID string)
 }
 
 func NewRepo(config Config, logger log.Logger) (Repository, error) {
@@ -151,11 +152,14 @@ func getDocumentKey(c context.Context, collection string, id string, db driver.D
 }
 
 func (r *repo) GetFullPath(ctx context.Context, id string, rootId string, userID string) string {
+	col := joinStrings(DOC_COLLECTION, userID)
+	rootKey, err := getDocumentKey(ctx, col, rootId, r.db)
+	targetKey, err := getDocumentKey(ctx, col, id, r.db)
 	query := `FOR v, e IN OUTBOUND SHORTEST_PATH @from TO @to GRAPH @graph
 				RETURN v`
 	bindVars := map[string]interface{}{
-		"from":  joinStrings(DOC_COLLECTION, userID, "/", rootId),
-		"to":    joinStrings(DOC_COLLECTION, userID, "/", id),
+		"from":  joinStrings(DOC_COLLECTION, userID, "/", rootKey),
+		"to":    joinStrings(DOC_COLLECTION, userID, "/", targetKey),
 		"graph": userID,
 	}
 	cursor, err := r.db.Query(ctx, query, bindVars)
@@ -281,4 +285,38 @@ func (r *repo) ListDirectoryFiles(ctx context.Context, targetID string, userID s
 		return nil, err
 	}
 	return readUserFileDataCursor(cursor), nil
+}
+
+func (r *repo) DeleteFileOrFolder(ctx context.Context, targetID string, userID string) {
+	// dir := joinStrings(DOC_COLLECTION, userID)
+	// query := `FOR doc in @@collection
+	// 			FILTER doc.id == @targetId
+	// action := `function (params) {
+	// 	var db = require('@arangodb').db;
+	// 	db._query('FOR i IN doc_113176837686976104031 RETURN i');
+	// }`
+
+	// d, err := r.db.Transaction(nil, action, &driver.TransactionOptions{
+	// 	ReadCollections: []string{
+	// 		"doc_113176837686976104031",
+	// 	},
+	// 	WaitForSync: true,
+	// })
+	// fmt.Println(d, err)
+	// key, err := getDocumentKey(ctx, joinStrings(DOC_COLLECTION, userID), targetID, r.db)
+	// if err != nil {
+	// 	return
+	// }
+	// eCol, err := r.db.Collection(ctx, joinStrings(EDGE_COLLECTION, userID))
+	// if err != nil {
+	// 	return
+	// }
+	// removeEdgeQuery := `FOR doc IN @@collection
+	// 						FILTER doc.id == @targetID
+	// 							`
+
+}
+
+func deleteEdge() {
+
 }

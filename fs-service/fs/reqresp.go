@@ -47,7 +47,6 @@ func DecodeCreateFolderRequest(ctx context.Context, r *http.Request) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("data not valid")
 	}
-	fmt.Println(data)
 	return CreateFolderRequest{
 		UserID:   userId,
 		ParentID: data.ParenntId,
@@ -72,6 +71,22 @@ func DecodeListDirectoryRequest(ctx context.Context, r *http.Request) (interface
 }
 
 func EncodeListDirectoryResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	res := response.(ListDirectoryResponse)
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(res)
+}
+
+func DecodeDeleteRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	uid := r.Header.Get("UserID")
+	fid := r.URL.Query().Get("path")
+	return ListDirectoryRequest{
+		UserId:   uid,
+		FolderId: fid,
+	}, nil
+}
+
+func EncodeDeleteResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	res := response.(ListDirectoryResponse)
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)

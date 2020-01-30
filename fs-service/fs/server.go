@@ -25,6 +25,12 @@ func NewHTTPServer(ctx context.Context, endpoints Endpoints) http.Handler {
 		EncodeCreateFolderResponse,
 	))
 
+	r.Methods("POST").Path("/del").Handler(kithttp.NewServer(
+		endpoints.DeleteFileOFolder,
+		DecodeDeleteRequest,
+		EncodeDeleteResponse,
+	))
+
 	r.Methods("GET").Path("/ls").Handler(kithttp.NewServer(
 		endpoints.ListDirectory,
 		DecodeListDirectoryRequest,

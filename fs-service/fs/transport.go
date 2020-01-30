@@ -48,16 +48,18 @@ type File struct {
 }
 
 type Endpoints struct {
-	CreateUser    endpoint.Endpoint
-	CreateFolder  endpoint.Endpoint
-	ListDirectory endpoint.Endpoint
+	CreateUser        endpoint.Endpoint
+	CreateFolder      endpoint.Endpoint
+	ListDirectory     endpoint.Endpoint
+	DeleteFileOFolder endpoint.Endpoint
 }
 
 func MakeEndPoints(s Service) Endpoints {
 	return Endpoints{
-		CreateUser:    makeCreateUserEndPoint(s),
-		CreateFolder:  makeCreateFolderEndPoint(s),
-		ListDirectory: makeListDirectoryEndPoint(s),
+		CreateUser:        makeCreateUserEndPoint(s),
+		CreateFolder:      makeCreateFolderEndPoint(s),
+		ListDirectory:     makeListDirectoryEndPoint(s),
+		DeleteFileOFolder: makeDeleteFileOrFolderEndPoint(s),
 	}
 }
 
@@ -97,5 +99,12 @@ func makeListDirectoryEndPoint(s Service) endpoint.Endpoint {
 			return nil, err
 		}
 		return ListDirectoryResponse{Ok: true, Files: files}, nil
+	}
+}
+
+func makeDeleteFileOrFolderEndPoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		s.DeleteFileOrDirectory(nil, "", "")
+		return ListDirectoryResponse{}, nil
 	}
 }
