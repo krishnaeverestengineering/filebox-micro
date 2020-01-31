@@ -293,6 +293,78 @@
         "headers_to_pass": [
           "Authorization"
         ]
+      },
+      {
+        "endpoint": "/del",
+        "method": "POST",
+        "extra_config": {
+          "github.com/devopsfaith/krakend-jose/validator": {
+            "alg": "HS256",
+            "jwk-url": "http://127.0.0.1:8081/keys",
+            "cookie_key": "",
+            "audience": [
+              "http://api.example.com"
+            ],
+            "roles": [
+              "role_a",
+              "role_b"
+            ],
+            "disable_jwk_security": true,
+            "roles_key": "roles",
+            "issuer": "https://krakend.io"
+          }
+        },
+        "output_encoding": "json",
+        "concurrent_calls": 1,
+        "querystring_params": [
+          "path"
+        ],
+        "backend": [
+          {
+            "url_pattern": "/del",
+            "encoding": "json",
+            "extra_config": {
+              "github.com/devopsfaith/krakend/proxy": {
+                "flatmap_filter": [
+                  {
+                    "type": "del",
+                    "args": [
+                      "files.*.userId"
+                    ]
+                  }
+                ]
+              },
+              "github.com/devopsfaith/krakend-martian": {
+                "fifo.Group": {
+                  "scope": [
+                    "request",
+                    "response"
+                  ],
+                  "aggregateErrors": true,
+                  "modifiers": [
+                    {
+                      "header.JwtClaim": {
+                        "scope": [
+                          "request"
+                        ],
+                        "claim": "sub",
+                        "header": "UserID"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "method": "POST",
+            "host": [
+              "http://127.0.0.1:8082"
+            ],
+            "disable_host_sanitize": false
+          }
+        ],
+        "headers_to_pass": [
+          "Authorization"
+        ]
       }
     ],
     "cache_ttl": "10ms"
