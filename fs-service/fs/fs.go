@@ -2,6 +2,7 @@ package fs
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -15,14 +16,23 @@ type FileSystem interface {
 	DeleteFile()
 }
 
-func CreateFolder(userID string, path string, name string) error {
-	dir := filepath.Join(root, userID, path, name)
+func CreateFolder(path string, data UserFile) error {
 	if !exists(root) {
 		os.Mkdir(root, os.ModePerm)
 	}
-	if !exists(filepath.Join(root, userID)) {
-		os.Mkdir(filepath.Join(root, userID), os.ModePerm)
+	if !exists(filepath.Join(root, data.UserID)) {
+		os.Mkdir(filepath.Join(root, data.UserID), os.ModePerm)
 	}
+	if data.Type == Folder {
+		createFolder(data.UserID, path, data.FileName)
+	} else if data.Type == TextFile {
+		createFile(data.UserID, path, data.FileName, data.Extension)
+	}
+	return nil
+}
+
+func createFolder(userID string, path string, name string) error {
+	dir := filepath.Join(root, userID, path, name)
 	if !exists(dir) {
 		err := os.Mkdir(dir, os.ModePerm)
 		if err != nil {
@@ -43,8 +53,31 @@ func DeleteFolder(dir string, name string, uid string) error {
 	return fmt.Errorf("File or Folder not found")
 }
 
-func CreateFile() {
+func ReadFile(name string, userID string) (interface{}, error) {
+	path := filepath.Join(root, userID, name)
+	if !exists(path) {
+		return nil, fmt.Errorf("File not found")
+	}
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	text := string(data)
+	return text, nil
+}
 
+func EditTextFile(name string, content string, userID string) error {
+	fullPath := filepath.Join(root, userID, name)
+	if !exists(fullPath) {
+		return fmt.Errorf("File not found")
+	}
+	return ioutil.WriteFile(fullPath, []byte(content), os.ModePerm)
+}
+
+func createFile(userID string, path string, name string, ext string) {
+	dir := filepath.Join(root, userID, path, name+ext)
+	file, err := os.Create(dir)
+	fmt.Println(file, err)
 }
 
 func DeleteFile() {

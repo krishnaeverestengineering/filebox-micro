@@ -47,10 +47,13 @@ func DecodeCreateFolderRequest(ctx context.Context, r *http.Request) (interface{
 	if err != nil {
 		return nil, fmt.Errorf("data not valid")
 	}
+	fmt.Println(data, err)
 	return CreateFolderRequest{
-		UserID:   userId,
-		ParentID: data.ParenntId,
-		Name:     data.FolderName,
+		UserID:     userId,
+		ParentID:   data.ParenntId,
+		Name:       data.FolderName,
+		FileType:   FileType(data.FileType),
+		FileFormat: data.FileFormat,
 	}, nil
 }
 
@@ -94,6 +97,44 @@ func DecodeDeleteRequest(ctx context.Context, r *http.Request) (interface{}, err
 
 func EncodeDeleteResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	res := response.(DeleteFileResponse)
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(res)
+}
+
+func DecodeEditFileRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	uid := r.Header.Get("UserID")
+	decoder := json.NewDecoder(r.Body)
+	var data EditFileRequest
+	err := decoder.Decode(&data)
+	if err != nil {
+		return nil, fmt.Errorf("data not valid")
+	}
+	data.UserId = uid
+	return data, nil
+}
+
+func EncodeEditFileResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	res := response.(EditFileResponse)
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(res)
+}
+
+func DecodeGetFileContentRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	uid := r.Header.Get("UserID")
+	fid := r.URL.Query().Get("file")
+	if fid == "" {
+		return nil, fmt.Errorf("FileId is invalid")
+	}
+	return GetFileContentRequest{
+		UserID: uid,
+		FileID: fid,
+	}, nil
+}
+
+func EncodeGetFileContentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	res := response.(GetFileContentResponse)
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
 	return encoder.Encode(res)

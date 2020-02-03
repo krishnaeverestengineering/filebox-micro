@@ -21,16 +21,17 @@ type FileType int
 
 const (
 	Folder   = FileType(1)
-	TextFile = FileType(2)
+	TextFile = FileType(0)
 )
 
 type UserFile struct {
-	UserID   string   `json:"userId"`
-	FileID   string   `json:"id"`
-	FileName string   `json:"filename"`
-	ParentId string   `json:"parentId"`
-	Type     FileType `json:"type"`
-	Path     string   `json:"path"`
+	UserID    string   `json:"userId"`
+	FileID    string   `json:"id"`
+	FileName  string   `json:"filename"`
+	ParentId  string   `json:"parentId"`
+	Type      FileType `json:"type"`
+	Extension string   `json:"ext"`
+	Path      string   `json:"path"`
 }
 
 type DirectoryEdge struct {
@@ -49,6 +50,7 @@ type Repository interface {
 	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
 	DeleteFileOrFolder(ctx context.Context, targetID string, userID string) error
+	GetDocument(ctx context.Context, id string, userID string) (interface{}, error)
 }
 
 func NewRepo(config Config, logger log.Logger) (Repository, error) {
@@ -125,6 +127,30 @@ func joinStrings(strs ...string) string {
 		sb.WriteString(str)
 	}
 	return sb.String()
+}
+
+func (r *repo) GetDocument(ctx context.Context, id string, userID string) (interface{}, error) {
+	query := `FOR doc IN @@collection
+				FILTER doc.id == @id
+					RETURN doc`
+	bindVars := map[string]interface{}{
+		"@collection": joinStrings(DOC_COLLECTION, userID),
+		"id":          id,
+	}
+	cursor, err := r.db.Query(context.Background(), query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close()
+	for {
+		var file UserFile
+		_, err := cursor.ReadDocument(nil, &file)
+		if driver.IsNoMoreDocuments(err) || err != nil {
+			break
+		}
+		return file, nil
+	}
+	return nil, fmt.Errorf("Record not found")
 }
 
 func getDocumentKey(c context.Context, collection string, id string, db driver.Database) (string, error) {
@@ -225,12 +251,13 @@ func (r *repo) CreateFolder(ctx context.Context, data UserFile) (interface{}, er
 		return nil, err
 	}
 	meta, err := uCol.CreateDocument(context.Background(), UserFile{
-		FileName: data.FileName,
-		FileID:   data.FileID,
-		Path:     data.FileName,
-		Type:     Folder,
-		ParentId: data.ParentId,
-		UserID:   data.UserID,
+		FileName:  data.FileName,
+		FileID:    data.FileID,
+		Path:      data.FileName,
+		Type:      data.Type,
+		ParentId:  data.ParentId,
+		UserID:    data.UserID,
+		Extension: data.Extension,
 	})
 	if err != nil {
 		return nil, err

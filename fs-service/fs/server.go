@@ -36,6 +36,17 @@ func NewHTTPServer(ctx context.Context, endpoints Endpoints) http.Handler {
 		DecodeListDirectoryRequest,
 		EncodeListDirectoryResponse,
 	))
+
+	r.Methods("POST").Path("/edit").Handler(kithttp.NewServer(
+		endpoints.EditFile,
+		DecodeEditFileRequest,
+		EncodeEditFileResponse,
+	))
+	r.Methods("GET").Path("/open").Handler(kithttp.NewServer(
+		endpoints.GetFileContent,
+		DecodeGetFileContentRequest,
+		EncodeGetFileContentResponse,
+	))
 	return r
 }
 

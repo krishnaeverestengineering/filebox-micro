@@ -3,6 +3,7 @@ package fs
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/go-kit/kit/log"
 )
@@ -12,6 +13,9 @@ type Service interface {
 	CreateFolder(ctx context.Context, data UserFile) (interface{}, error)
 	ListDirectoryFiles(ctx context.Context, id string, userID string) ([]UserFile, error)
 	DeleteFileOrDirectory(ctx context.Context, fid string, fname string, userID string) error
+	//OpenFile(ctx context.Context, fid string, userID string) error
+	GetFileContent(ctx context.Context, fid string, userID string) (interface{}, string, error)
+	EditTextFileContent(ctx context.Context, fid string, content string, userID string) error
 }
 
 type FSService struct {
@@ -36,7 +40,7 @@ func (s *FSService) CreateFolder(ctx context.Context, data UserFile) (interface{
 		return nil, fmt.Errorf("path is empty", nil)
 	}
 	fmt.Println(path)
-	err := CreateFolder(data.UserID, path, data.FileName)
+	err := CreateFolder(path, data)
 	if err != nil {
 		return nil, err
 	}
@@ -62,4 +66,31 @@ func (s *FSService) DeleteFileOrDirectory(ctx context.Context, fid string, fname
 	}
 	s.repo.DeleteFileOrFolder(ctx, fid, userID)
 	return nil
+}
+
+func (s *FSService) GetFileContent(ctx context.Context, fid string, userID string) (interface{}, string, error) {
+	path := s.repo.GetFullPath(ctx, fid, "/", userID)
+	if path == "" {
+		return nil, "", fmt.Errorf("path is empty")
+	}
+	file, err := s.repo.GetDocument(ctx, fid, userID)
+	if err != nil {
+		return nil, "", err
+	}
+	uFile := file.(UserFile)
+	content, err := ReadFile(filepath.Join(path+uFile.Extension), userID)
+	return file, content.(string), err
+}
+
+func (s *FSService) EditTextFileContent(ctx context.Context, fid string, content string, userID string) error {
+	path := s.repo.GetFullPath(ctx, fid, "/", userID)
+	if path == "" {
+		return fmt.Errorf("path is empty")
+	}
+	file, err := s.repo.GetDocument(ctx, fid, userID)
+	if err != nil {
+		return err
+	}
+	uFile := file.(UserFile)
+	return EditTextFile(filepath.Join(path+uFile.Extension), content, userID)
 }
